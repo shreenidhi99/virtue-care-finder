@@ -1,0 +1,10 @@
+command: ["streamlit", "run", "app.py"]
+env:
+  - name: GENIE_SPACE_ID
+    valueFrom: genie-space        # resource key added in the App UI (Step 9)
+  - name: DATABRICKS_WAREHOUSE_ID
+    valueFrom: sql-warehouse      # resource key added in the App UI (Step 9)
+  - name: VF_SCHEMA
+    value: "workspace.virtue_finder"
+  - name: STREAMLIT_BROWSER_GATHER_USAGE_STATS
+    value: "false"

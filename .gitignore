@@ -1,0 +1,8 @@
+__pycache__/
+.venv/
+.env
+data/raw/
+.streamlit/secrets.toml
+.databricks/
+*.pkl
+.pytest_cache/
