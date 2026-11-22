@@ -1,0 +1,12 @@
+# Databricks App manifest for the Next.js version. Deploy this folder (web/) as the app source.
+# The platform runs `npm install` and `npm run build`, then this command.
+command: ["npm", "run", "start"]
+env:
+  - name: GENIE_SPACE_ID
+    valueFrom: genie-space        # resource key added in the App UI
+  - name: DATABRICKS_WAREHOUSE_ID
+    valueFrom: sql-warehouse      # resource key added in the App UI
+  - name: VF_SCHEMA
+    value: "workspace.virtue_finder"
+  - name: NEXT_TELEMETRY_DISABLED
+    value: "1"
