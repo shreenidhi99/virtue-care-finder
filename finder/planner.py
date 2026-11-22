@@ -318,7 +318,20 @@ def _selected(data: pd.DataFrame) -> tuple[str, str] | None:
     return (r.iloc[0]["state"], r.iloc[0]["district"]) if not r.empty else None
 
 
+DATA_CAVEATS = (
+    "**Read with care.** "
+    "**Supply** = facilities found in our records (web-mined, mostly private/registered providers; "
+    "government PHCs/CHCs/district hospitals are largely missing). A high underserved score can partly mean "
+    "“government facilities not in our data”. "
+    "**Per-10k figures** divide by the ~900 households NFHS-5 *surveyed*, not the district's real households: "
+    "use them only to compare districts (higher/lower), never as real rates. "
+    "**Beds**: only ~28% of facilities report beds; a district showing 0 beds may simply have no bed data. "
+    "**Distances** for Vadodara, Patan and Chhota Udepur (Gujarat) are wrong (bad post-office coordinates)."
+)
+
+
 def tab_overview(geo, data) -> None:
+    st.info(DATA_CAVEATS)
     _, picked = _choropleth_block(geo, data, METRICS, "ov")
     if picked:
         _select(picked)
@@ -356,7 +369,9 @@ def tab_district(geo, data, pct) -> None:
     c[0].metric("Underserved score", _fmt(r["underserved_score"], ""))
     c[1].metric("Facilities mapped", _count(r["n_facilities"]))
     beds = r["beds_per_10k_households"]
-    c[2].metric("Beds / 10k households", "no reliable data" if pd.isna(beds) else f"{beds:.1f}")
+    c[2].metric("Beds / 10k households", "no reliable data" if pd.isna(beds) else f"{beds:.1f}",
+                help="Relative only: divided by NFHS-5 surveyed households, not real households. "
+                     "Only ~28% of facilities report beds, so 0 can mean no bed data.")
     c[3].metric("Avg km to any facility", _fmt(r["avg_km_to_nearest_facility"], "km"))
 
     try:
@@ -405,7 +420,9 @@ def tab_distance(geo, data) -> None:
     st.caption("Distances are straight-line from each post office to the nearest mapped facility, within the "
                f"same state only. {n_dist} of {len(data)} districts have distance data. Left out on purpose: "
                "Leh, Kargil and Lakshadweep (no facility in the same state/UT) and Yanam (an enclave, where "
-               "same-state distance would be ~630 km).")
+               "same-state distance would be ~630 km). ⚠ Vadodara, Patan and Chhota Udepur (Gujarat) show "
+               "~270–315 km because many of their post-office coordinates are wrong (stamped in the Arabian Sea). "
+               "Ignore those three until the data is fixed.")
 
 
 def tab_compare(data) -> None:
