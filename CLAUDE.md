@@ -15,24 +15,36 @@ address_city, address_zipOrPostcode, latitude, longitude, capacity,
 numberDoctors, facilityTypeId, operatorTypeId, specialties, procedure,
 equipment, capability, description.
 
-Architecture:
-- Streamlit app, deployed twice from the same code: as a Databricks App (workspace sign-in) AND publicly on Streamlit Community Cloud so anyone with the link can use it. Layout: chat left, map + cards right.
-- Free text goes to a Genie space via the Genie Conversation API (databricks-sdk `w.genie`).
-- RANKING IS NEVER LEFT TO GENIE'S FREE SQL. Ranking comes from the deterministic
-  SQL table function `workspace.virtue_finder.recommend_facilities(...)`, registered
-  in the Genie space as a trusted asset and also callable directly by the app.
-- Cards and map pins are built from the function's output columns.
+Planner tables (read by finder/planner.py): facility_nfhs5_district_burden_supply (master),
+facility_nfhs5_district_underserved_score, facility_nfhs5_district_service_distance,
+facility_nfhs5_facility_context (facility pins + has_* service flags), facility_geo_polygon_qa
+(district_match), district_polygon_map (polygon -> NFHS-5 district). Known data problems are in ISSUES.md.
+
+Architecture (current app):
+- Streamlit app, deployed twice from the same code: as a Databricks App (workspace sign-in) AND publicly on Streamlit Community Cloud so anyone with the link can use it.
+- Two modes, switched at the top of app.py:
+  - **Find care**: a plain chat with the Genie agent (finder/genie.py, Genie Conversation API). The user's text goes to the agent as typed, with service and place in one message. Follow-ups and answers to the agent's clarifying questions continue the same conversation, and Genie's suggested questions show as reply buttons. No location picker or maps.
+  - **District planner** (finder/planner.py + planner_charts.py): four tabs: National overview, District drill-down, Distance to care, Compare.
+- Ranking should come from the deterministic SQL table function `recommend_facilities(...)`, registered in the Genie space as a trusted asset. The app does not re-rank: it renders the agent's table (finder/results.py).
+- finder/cards.py, ranking.py, location.py, i18n.py are from the earlier direct-ranking design and currently unused.
 
 Rules:
-- Every card shows a quoted evidence line and its source column.
+- Facility results are cards (finder/results.py), never raw tables. Each card shows its evidence quotes with their source column, parsed from the agent's `best_receipts` JSON.
+- Users never see intermediate data: no JSON, ids, keys, model fields (p, mode, service_level, expected_km), "All columns" tables or SQL.
+- Confidence badge from `p` (0-1, shown as %): green > 80, orange 60-80, red < 60.
 - If no facility matches the exact service, show the yellow honesty banner and mark cards "Broadened".
 - Never claim a service is available; say "mentioned in records" and add "Verify by phone".
-- Keep secrets out of code. Auth comes from the Databricks App environment, a local CLI profile, or (public host) DATABRICKS_HOST + DATABRICKS_CLIENT_ID + DATABRICKS_CLIENT_SECRET of a least-privilege service principal set as host secrets.
+- Planner display rules: thin_sample / low_confidence estimates drawn faded; suppressed or unmatched districts grey; 0 facilities = "none mapped" (never "none exist"); NULL beds = "no reliable bed data" (never 0); distances are straight-line, same-state only; credit "geoBoundaries.org (ODbL 1.0)".
+- District boundaries ship as data/india_districts.geojson, built by scripts/build_district_geojson.py. Outer rings must be CLOCKWISE for Plotly (d3-geo); otherwise the map renders as one solid rectangle. Never join districts by name string alone: 7 names repeat across states, so use the `STATE|District` feature id.
+- Keep secrets out of code. Auth comes from the Databricks App environment, a local CLI profile, or (public host) DATABRICKS_HOST + DATABRICKS_CLIENT_ID + DATABRICKS_CLIENT_SECRET of a least-privilege service principal set as host secrets. Warehouse/Genie IDs are not secrets (defaults in run_local.ps1, overridable by env var).
+- All SQL uses named parameters; only the validated VF_SCHEMA is interpolated.
 - Public app: rate-limit per session and cache SQL/Genie results so link traffic cannot burn the Free Edition compute quota.
-- Languages: English, Hindi, Tamil, behind env var VF_LANGS (default "en,hi,ta"); setting VF_LANGS=en must cleanly remove the other languages. Evidence quotes always stay in the original English.
-- Python 3.11, streamlit, databricks-sdk, pydeck, pandas, folium + streamlit-folium (location picker map), plotly (planner charts: choropleth, scatter, radar, beeswarm, heatmap). Altair is allowed because it ships with streamlit. No other heavy deps (no geopandas/shapely in the app; geometry work stays in notebooks).
-- Location picker: OpenStreetMap Nominatim search (no key, cached, light use) + click-on-map; the chosen lat/long is sent to the Genie agent as "Location: latitude X, longitude Y".
+- Languages (planned, not built yet): English, Hindi, Tamil, behind env var VF_LANGS (default "en,hi,ta"); setting VF_LANGS=en must cleanly remove the other languages. Evidence quotes always stay in the original English.
+- Python 3.11+, streamlit, databricks-sdk, pandas, plotly. Altair is allowed because it ships with streamlit. No other heavy deps (no geopandas/shapely in the app; geometry work stays in notebooks or scripts/).
+- Run locally with start_app.bat. Restart it after changing anything under finder/: a browser refresh doesn't reload imported modules.
 ```
+
+> **Note:** Steps 1–11 below are the original build plan, kept for reference. Some of it has been superseded by the architecture above: the location picker, pydeck map and direct-ranking UI were removed.
 
 ---
 
