@@ -14,6 +14,8 @@ const EMPTY = new Set(["", "none", "null", "nan", "[]", "{}"]);
 export const INTERNAL = new Set([
   "entity_id", "unique_id", "service_key", "service_level", "facility_profile_name",
   "mode", "p", "expected_km", "best_receipts", "rarity_class", "broadened",
+  // NFHS-5 answers: survey bookkeeping, not something users act on.
+  "value_status", "unit",
 ]);
 const SOURCE_LABEL: Record<string, string> = {
   capability: "capability", procedure: "procedure", description: "description",
@@ -163,7 +165,8 @@ export function addContacts(columns: string[], rows: (string | null)[][], contac
 }
 
 function plainTable(columns: string[], rows: (string | null)[][], note?: string): AnswerResult {
-  const keep = columns.map((c, i) => [c, i] as const).filter(([c]) => !INTERNAL.has(c));
+  // Case-insensitive: Genie sometimes aliases columns (e.g. "Value_Status", "UNIT").
+  const keep = columns.map((c, i) => [c, i] as const).filter(([c]) => !INTERNAL.has(c.trim().toLowerCase()));
   return { kind: "table", columns: keep.map(([c]) => c), rows: rows.map((r) => keep.map(([, i]) => r[i])), ...(note ? { note } : {}) };
 }
 

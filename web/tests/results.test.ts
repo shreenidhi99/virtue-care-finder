@@ -97,3 +97,12 @@ test("pickPhone prefers officialPhone, else the first listed number", () => {
   assert.equal(pickPhone("null", "0462 2572944, 0462 1"), "0462 2572944");
   assert.equal(pickPhone(null, "[]"), null);
 });
+
+test("NFHS-5 tables hide value_status and unit (any case)", () => {
+  const r = shapeResult(["state", "district", "indicator", "value", "Value_Status", "UNIT"],
+    [["Bihar", "Purnia", "Child anaemia", "71.2", "ok", "%"]]);
+  assert.equal(r?.kind, "table");
+  if (r?.kind !== "table") return;
+  assert.deepEqual(r.columns, ["state", "district", "indicator", "value"]);
+  assert.deepEqual(r.rows, [["Bihar", "Purnia", "Child anaemia", "71.2"]]);
+});

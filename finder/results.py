@@ -17,7 +17,8 @@ NAME_COLS = ("facility_name", "name", "facility")
 CONFIDENCE_COLS = ("p", "confidence", "score")
 EMPTY = {"", "none", "null", "nan", "[]", "{}"}
 INTERNAL = ("entity_id", "unique_id", "service_key", "service_level", "facility_profile_name",
-            "mode", "p", "expected_km", "best_receipts", "rarity_class")
+            "mode", "p", "expected_km", "best_receipts", "rarity_class",
+            "value_status", "unit")  # last two: NFHS-5 survey bookkeeping, not shown to users
 SOURCE_LABEL = {"capability": "capability", "procedure": "procedure", "description": "description",
                 "equipment": "equipment", "specialties": "specialty list"}
 
@@ -144,7 +145,9 @@ def render_table(df: pd.DataFrame | None, key: str) -> None:
         return
     col = name_column(df)
     if col is None:
-        st.dataframe(df.drop(columns=[c for c in INTERNAL if c in df.columns]), width="stretch", hide_index=True)
+        # Case-insensitive: Genie sometimes aliases columns (e.g. "Value_Status", "UNIT").
+        hidden = [c for c in df.columns if str(c).strip().lower() in INTERNAL]
+        st.dataframe(df.drop(columns=hidden), width="stretch", hide_index=True)
         return
     for i, (_, row) in enumerate(df.iterrows()):
         render_card(row, col, expanded=(i == 0), key=f"{key}-{i}")
