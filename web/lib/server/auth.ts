@@ -50,14 +50,28 @@ export async function host(): Promise<string> {
 
 async function fetchToken(): Promise<Token> {
   if (usesServicePrincipal()) {
-    const basic = Buffer.from(`${process.env.DATABRICKS_CLIENT_ID}:${process.env.DATABRICKS_CLIENT_SECRET}`).toString("base64");
+    // Trim: values pasted into a host's env-var UI often pick up a trailing space or newline.
+    const id = process.env.DATABRICKS_CLIENT_ID!.trim();
+    const secret = process.env.DATABRICKS_CLIENT_SECRET!.trim();
+    const basic = Buffer.from(`${id}:${secret}`).toString("base64");
     const r = await fetch(`${await host()}/oidc/v1/token`, {
       method: "POST",
       headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/x-www-form-urlencoded" },
       body: "grant_type=client_credentials&scope=all-apis",
       cache: "no-store",
     });
-    if (!r.ok) throw new Error(`Service principal sign-in failed (${r.status})`);
+    if (!r.ok) {
+      // Surface Databricks' reason (e.g. invalid_client) so a bad ID/secret is easy to spot; never echo the secret.
+      let why = "";
+      try {
+        const e = (await r.json()) as { error?: string; error_description?: string };
+        why = [e.error, e.error_description].filter(Boolean).join(": ");
+      } catch {
+        /* non-JSON body */
+      }
+      const hint = r.status === 401 ? " Check DATABRICKS_CLIENT_ID is the Application ID (a UUID) and the secret is current." : "";
+      throw new Error(`Service principal sign-in failed (${r.status}${why ? `: ${why}` : ""}).${hint}`);
+    }
     const j = (await r.json()) as { access_token: string; expires_in: number };
     return { value: j.access_token, expiresAt: Date.now() + j.expires_in * 1000 };
   }

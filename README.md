@@ -2,6 +2,8 @@
 
 *Built on Databricks for the Virtue Foundation DAIS 2026 challenge. All tables live in `workspace.virtue_finder`. Every number here comes from a query you can re-run in the pipeline notebook.*
 
+**▶ Live app: https://virtue-care-finder.vercel.app** (*Find care* chat + *District planner* dashboard; no sign-in needed)
+
 **Contents**
 0. Problem and guiding principles
 1. Data cleaning and deduplication
