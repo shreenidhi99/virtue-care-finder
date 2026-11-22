@@ -27,6 +27,29 @@ After changing code under `finder/`, restart with `start_app.bat`. A browser ref
 
 No secrets live in this repo. The warehouse ID and Genie space ID in `run_local.ps1` aren't secrets, and auth comes from your own CLI login.
 
+## Workspace settings
+
+The app needs four settings. `run_local.ps1` fills in the team defaults, so on the team workspace you only need the `databricks auth login` step above.
+
+| Setting | Team default | What it is / where to find it |
+|---|---|---|
+| Workspace URL | `https://dbc-a2638f61-0f88.cloud.databricks.com` | The address you see in the browser when signed in to Databricks. It's stored in your CLI profile by `databricks auth login --host <url> --profile <name>`, not in the code. |
+| `DATABRICKS_CONFIG_PROFILE` | `care-finder` | The profile name you gave in `databricks auth login`. List yours with `databricks auth profiles`. |
+| `DATABRICKS_WAREHOUSE_ID` | `0d88dd62ca1e1fec` | **SQL Warehouses** → your warehouse → **Connection details**. It's the last part of the HTTP path (`/sql/1.0/warehouses/<id>`). |
+| `GENIE_SPACE_ID` | `01f1e5d2ef9711989854a6d1fb63067c` | Open the Genie space. It's the part of the URL after `/genie/rooms/`. |
+| `VF_SCHEMA` | `workspace.virtue_finder` | Unity Catalog `catalog.schema` holding the tables. |
+
+To use a different value, set it in PowerShell before starting (it only lasts for that window):
+
+```powershell
+$env:DATABRICKS_CONFIG_PROFILE = "my-profile"   # e.g. if you logged in under another profile name
+.\run_local.ps1
+```
+
+`run_local.ps1` prints the values it's using when it starts. Your Databricks user also needs permission to use the warehouse, run the Genie space, and read `workspace.virtue_finder` (ask the workspace owner). If the app shows "PERMISSION_DENIED" or "not found", check those first.
+
+In the deployed Databricks App, these come from `app.yaml` and the app's resources instead (`sql-warehouse`, `genie-space`).
+
 ## Layout
 
 ```
